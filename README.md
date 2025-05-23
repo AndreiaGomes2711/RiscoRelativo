@@ -531,7 +531,16 @@ https://console.cloud.google.com/bigquery?hl=pt&invt=AbyA8A&project=projeto-risc
 ## Link dos Dashboards e graficos de analise
 https://lookerstudio.google.com/reporting/71d34169-8954-4733-bfec-44caa1674d81
 
+## Link Colab
+https://colab.research.google.com/drive/1ZhYb97fRQKfyzvDQDNsKdgBZ6w27gJqq?usp=sharing
+https://colab.research.google.com/drive/1ClhxLiy0Qe5jwiEf6ehR1xtcKwuVx2hZ?usp=sharing
 
+## Link Notion
+## Gestao Sprints
+https://www.notion.so/Sprints-e-gr-fico-Gantt-1e71f093899981ee8ef3e4c24dba3c28?pvs=4
+
+## Documentacao tecnica passo a passo completa 
+https://www.notion.so/Documenta-o-t-cnica-1e81f09389998051871dfdae93090759?pvs=4
 
 FROM `projeto-risco-relativo-458712.Dataset.RR_v19`
 ---
