@@ -444,21 +444,117 @@ SELECT
 FROM `projeto-risco-relativo-458712.Dataset.RR_Sensivel_v30`
 
 
-## Matriz apos ajuste dos coeficientes nas variáveis
+## Gerando Matriz de confusao a partir do modelo gerado pela Regressao Logistica sem aplicar score ajustavel threshold 0,65
 
-Matriz de Confusão:
-[[26935  8356]
-[   43   640]]
-Acurácia: 0.7665
-Precisão: 0.0711
-Recall: 0.9370
-F1-score: 0.1322
+WITH dados_base AS (
+  SELECT
+    default_flag,
+    classificacao_final
+  FROM
+    `projeto-risco-relativo-458712.Dataset.RR_Preciso_v34`
+  WHERE
+    default_flag IS NOT NULL
+    AND classificacao_final IS NOT NULL
+),
+
+matriz_confusao AS (
+  SELECT
+    COUNT(*) AS total,
+    SUM(CASE WHEN default_flag = 0 AND classificacao_final = 0 THEN 1 ELSE 0 END) AS TN,
+    SUM(CASE WHEN default_flag = 0 AND classificacao_final = 1 THEN 1 ELSE 0 END) AS FP,
+    SUM(CASE WHEN default_flag = 1 AND classificacao_final = 0 THEN 1 ELSE 0 END) AS FN,
+    SUM(CASE WHEN default_flag = 1 AND classificacao_final = 1 THEN 1 ELSE 0 END) AS TP
+  FROM dados_base
+),
+
+metricas_avaliacao AS (
+  SELECT
+    TP,
+    TN,
+    FP,
+    FN,
+    total,
+    ROUND((TP + TN) / total, 4) AS acuracia,
+    ROUND(TP / NULLIF(TP + FP, 0), 4) AS precisao,
+    ROUND(TP / NULLIF(TP + FN, 0), 4) AS recall,
+    ROUND(2 * TP / NULLIF(2 * TP + FP + FN, 0), 4) AS f1_score
+  FROM matriz_confusao
+)
+
+SELECT * FROM metricas_avaliacao;
+
+Linha	TP	TN	FP	FN	total	acuracia	precisao	recall	f1_score
+1	562	28684	6607	121	35974	0.813	0.0784	0.8228	0.1431
 
 ## Analise
-Acurácia	0.7665	~76,6% das classificações estão corretas (mas cuidado: a base pode ser desbalanceada).
-Precisão	0.0711	Das previsões como mau pagador, apenas 7,1% estavam certas. Alta taxa de falsos positivos.
-Recall	0.9370	O modelo capturou 93,7% dos maus pagadores — excelente cobertura!
-F1-score	0.1322	Equilíbrio entre precisão e recall, mas ainda baixo por conta da precisão ruim.
+
+Métrica	Significado
+Acurácia	Percentual total de acertos (TP + TN) / Total
+Precisão	Entre os previstos como inadimplentes, quantos realmente são (TP / (TP+FP))
+Recall	Entre os inadimplentes reais, quantos foram corretamente identificados
+F1-Score	Média harmônica entre Precisão e Recall (boa para datasets desbalanceados)
+
+## Thresholds de 0,10
+
+WITH dados_base AS (
+  SELECT
+    default_flag,
+    classificacao_final
+  FROM
+    `projeto-risco-relativo-458712.Dataset.RR_Preciso_v30`
+  WHERE
+    default_flag IS NOT NULL
+    AND classificacao_final IS NOT NULL
+),
+
+matriz_confusao AS (
+  SELECT
+    COUNT(*) AS total,
+    SUM(CASE WHEN default_flag = 0 AND classificacao_final = 0 THEN 1 ELSE 0 END) AS TN,
+    SUM(CASE WHEN default_flag = 0 AND classificacao_final = 1 THEN 1 ELSE 0 END) AS FP,
+    SUM(CASE WHEN default_flag = 1 AND classificacao_final = 0 THEN 1 ELSE 0 END) AS FN,
+    SUM(CASE WHEN default_flag = 1 AND classificacao_final = 1 THEN 1 ELSE 0 END) AS TP
+  FROM dados_base
+),
+
+metricas_avaliacao AS (
+  SELECT
+    TP,
+    TN,
+    FP,
+    FN,
+    total,
+    ROUND((TP + TN) / total, 4) AS acuracia,
+    ROUND(TP / NULLIF(TP + FP, 0), 4) AS precisao,
+    ROUND(TP / NULLIF(TP + FN, 0), 4) AS recall,
+    ROUND(2 * TP / NULLIF(2 * TP + FP + FN, 0), 4) AS f1_score
+  FROM matriz_confusao
+)
+
+SELECT * FROM metricas_avaliacao;
+
+
+Linha	TP	TN	FP	FN	total	acuracia	precisao	recall	f1_score
+1	640	26935	8356	43	35974	0.7665	0.0711	0.937	0.1322
+
+
+
+### Comparação com o modelo anterior:
+
+| Métrica | Modelo 1 | Modelo 2 | Diferença |
+| --- | --- | --- | --- |
+| **Acurácia** | 81,3% | 76,6% | ↓ (menor acerto total) |
+| **Precisão** | 7,84% | 7,11% | ↓ (mais falsos positivos) |
+| **Recall** | 82,3% | 93,7% | ↑ (melhor captura de risco) |
+| **F1-score** | 14,3% | 13,2% | ↓ (leve queda no equilíbrio) |
+
+---
+
+### **Interpretação Estratégica**:
+
+> "Este segundo modelo melhora significativamente a detecção de inadimplentes (recall de 93,7%), o que pode ser essencial em um cenário de alta inadimplência. No entanto, isso vem ao custo de um aumento nos falsos positivos, o que pode significar rejeitar ou restringir crédito de clientes que pagariam normalmente. Ele é útil para priorizar análises humanas ou ações proativas de mitigação de risco."
+>
+
 
 ## Teste de Modelo aplicando Score >=4
 
@@ -542,7 +638,10 @@ https://www.notion.so/Sprints-e-gr-fico-Gantt-1e71f093899981ee8ef3e4c24dba3c28?p
 ## Documentacao tecnica passo a passo completa 
 https://www.notion.so/Documenta-o-t-cnica-1e81f09389998051871dfdae93090759?pvs=4
 
-FROM `projeto-risco-relativo-458712.Dataset.RR_v19`
+
+
+## link video Apresentacao
+https://www.loom.com/share/fa73659c802d4aacb6010048efa7d6c2?sid=15d845eb-f8f3-4e7e-94ab-1438ce25b161
 ---
 
 ##  Contribuições
